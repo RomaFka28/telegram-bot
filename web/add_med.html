@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Medication</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            color-scheme: light dark;
+        }
+        body { font-family: 'Inter', sans-serif; padding: 20px; background: var(--tg-theme-bg-color, #f5f7fb); color: var(--tg-theme-text-color, #1f2d3d); }
+        .card { background: rgba(255,255,255,0.9); border-radius: 18px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.08); }
+        .row { display: flex; gap: 12px; }
+        .row .field { flex: 1; }
+        label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7c93; }
+        input, select, textarea {
+            width: 100%; padding: 12px; margin: 4px 0 16px;
+            border-radius: 12px; border: 1px solid rgba(107,124,147,0.3);
+            background: rgba(255,255,255,0.6); font-size: 15px;
+        }
+        textarea { resize: vertical; min-height: 80px; }
+        button {
+            width: 100%; padding: 15px; background: linear-gradient(135deg, #2ac4ff, #0088cc);
+            color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: transform 0.2s ease;
+        }
+        button:hover { transform: translateY(-1px); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Добавить лекарство</h2>
+        <form id="med-form">
+            <label for="name">Название</label>
+            <input type="text" id="name" placeholder="Например, Витамин D3" required>
+
+            <div class="row">
+                <div class="field">
+                    <label for="dosage">Дозировка</label>
+                    <input type="text" id="dosage" placeholder="500 мг" required>
+                </div>
+                <div class="field">
+                    <label for="form">Форма</label>
+                    <input type="text" id="form" placeholder="таблетки, капли..." required>
+                </div>
+            </div>
+
+            <label for="category">Категория</label>
+            <select id="category" required>
+                <option value="Витамины">Витамины</option>
+                <option value="Рецептурное">Рецептурное</option>
+                <option value="Антибиотики">Антибиотики</option>
+                <option value="БАД">БАД</option>
+                <option value="Другое">Другое</option>
+            </select>
+
+            <div class="row">
+                <div class="field">
+                    <label for="dose_units">Единица дозы</label>
+                    <input type="text" id="dose_units" placeholder="табл., мл, капсула" required>
+                </div>
+                <div class="field">
+                    <label for="dose_size">Сколько единиц за приём</label>
+                    <input type="number" id="dose_size" step="0.5" value="1" min="0.5">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="field">
+                    <label for="pack_total">Всего в упаковке</label>
+                    <input type="number" id="pack_total" min="0" placeholder="30">
+                </div>
+                <div class="field">
+                    <label for="stock_remaining">Сколько осталось</label>
+                    <input type="number" id="stock_remaining" min="0" placeholder="30">
+                </div>
+            </div>
+
+            <label for="notes">Комментарий (опционально)</label>
+            <textarea id="notes" placeholder="Особые инструкции, код цвета и т.д."></textarea>
+
+            <label for="photo_file_id">ID фото (опционально)</label>
+            <input type="text" id="photo_file_id" placeholder="Можно отправить фото отдельно боту">
+
+            <button type="submit">Сохранить</button>
+        </form>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.ready();
+
+        document.getElementById("med-form").addEventListener("submit", function(event) {
+            event.preventDefault();
+            let med_data = {
+                name: document.getElementById("name").value,
+                dosage: document.getElementById("dosage").value,
+                form: document.getElementById("form").value,
+                category: document.getElementById("category").value,
+                dose_units: document.getElementById("dose_units").value,
+                dose_size: document.getElementById("dose_size").value,
+                pack_total: document.getElementById("pack_total").value,
+                stock_remaining: document.getElementById("stock_remaining").value,
+                notes: document.getElementById("notes").value,
+                photo_file_id: document.getElementById("photo_file_id").value,
+            };
+            tg.sendData(JSON.stringify(med_data));
+            tg.close();
+        });
+    </script>
+</body>
+</html>
