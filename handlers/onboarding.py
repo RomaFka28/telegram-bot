@@ -9,8 +9,6 @@ from utils.messages import DISCLAIMER, PERSONALITY_CHOICES, THEME_CHOICES
 
 
 async def start_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    async with context.application.chat_data_lock:
-        pass
     await update.message.reply_text(
         f"{DISCLAIMER}\n\nКак тебя зовут?",
     )
