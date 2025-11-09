@@ -50,7 +50,7 @@ class ReminderScheduler:
                 "time": reminder.time_of_day,
                 "data": data,
                 "name": job_name,
-                "timezone": tz,
+                "job_kwargs": {"timezone": tz},
             }
             if days:
                 kwargs["days"] = days
