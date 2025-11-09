@@ -39,23 +39,22 @@ class ReminderScheduler:
             }
             days = None
             if reminder.schedule_type == "weekly" and reminder.days_of_week:
-                days = tuple(
+                parsed_days = [
                     day_map[d.strip().lower()]
                     for d in reminder.days_of_week.split(",")
                     if d.strip().lower() in day_map
-                )
-                if not days:
-                    days = None
-            self.job_queue.run_daily(
-                self.callback,
-                time=reminder.time_of_day,
-                data=data,
-                name=job_name,
-                job_kwargs={
-                    "timezone": tz,
-                    "day_of_week": ",".join(str(d) for d in days) if days else "*",
-                },
-            )
+                ]
+                if parsed_days:
+                    days = tuple(parsed_days)
+            kwargs = {
+                "time": reminder.time_of_day,
+                "data": data,
+                "name": job_name,
+                "timezone": tz,
+            }
+            if days:
+                kwargs["days"] = days
+            self.job_queue.run_daily(self.callback, **kwargs)
         elif reminder.schedule_type == "interval" and reminder.interval_hours:
             self.job_queue.run_repeating(
                 self.callback,
