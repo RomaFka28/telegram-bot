@@ -1,6 +1,13 @@
 import datetime as dt
+import re
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+    Update,
+)
 from telegram.ext import ContextTypes, ConversationHandler
 
 from database import get_db
@@ -8,25 +15,66 @@ from models import Reminder, User
 from services import achievement_service, medication_service, reminder_service, user_service
 from handlers.states import ReminderState
 from utils.personality import personality_text
-from handlers import family as family_handlers
+
+QUICK_TIME_CHOICES = ["07:00", "08:00", "09:00", "12:00", "18:00", "21:00"]
+DAY_MAPPING = {
+    "пн": "mon",
+    "пон": "mon",
+    "mon": "mon",
+    "вт": "tue",
+    "tue": "tue",
+    "ср": "wed",
+    "wed": "wed",
+    "чт": "thu",
+    "thu": "thu",
+    "пт": "fri",
+    "fri": "fri",
+    "сб": "sat",
+    "суб": "sat",
+    "sat": "sat",
+    "вс": "sun",
+    "sun": "sun",
+}
 
 
-def _schedule_keyboard():
+def _schedule_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("По времени", callback_data="rem_type:fixed_time"),
+                InlineKeyboardButton("К конкретному времени", callback_data="rem_type:fixed_time"),
                 InlineKeyboardButton("По дням недели", callback_data="rem_type:weekly"),
             ],
             [
-                InlineKeyboardButton("Интервалы", callback_data="rem_type:interval"),
-                InlineKeyboardButton("Перед/после события", callback_data="rem_type:event"),
+                InlineKeyboardButton("Через интервалы", callback_data="rem_type:interval"),
+                InlineKeyboardButton("После события", callback_data="rem_type:event"),
             ],
             [
-                InlineKeyboardButton("Гео-триггер", callback_data="rem_type:geo"),
+                InlineKeyboardButton("По геолокации", callback_data="rem_type:geo"),
             ],
         ]
     )
+
+
+def _quick_time_keyboard() -> ReplyKeyboardMarkup:
+    rows = [QUICK_TIME_CHOICES[i : i + 3] for i in range(0, len(QUICK_TIME_CHOICES), 3)]
+    return ReplyKeyboardMarkup(rows, resize_keyboard=True, one_time_keyboard=True)
+
+
+def _parse_time(value: str) -> dt.time | None:
+    cleaned = value.strip()
+    cleaned = cleaned.replace(".", ":").replace(",", ":")
+    cleaned = re.sub(r"\s+", "", cleaned)
+    match = re.match(r"^(\d{1,2})[:\-]?(\d{2})$", cleaned)
+    if not match:
+        if cleaned.isdigit() and len(cleaned) in {3, 4}:
+            match = re.match(r"^(\d{1,2})(\d{2})$", cleaned)
+        else:
+            return None
+    hour = int(match.group(1))
+    minute = int(match.group(2))
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        return None
+    return dt.time(hour=hour, minute=minute)
 
 
 async def start_reminder_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -45,11 +93,9 @@ async def start_reminder_setup(update: Update, context: ContextTypes.DEFAULT_TYP
         [InlineKeyboardButton(med.name, callback_data=f"rem_med:{med.id}")]
         for med in meds
     ]
-    keyboard.append(
-        [InlineKeyboardButton("Общее напоминание", callback_data="rem_med:0")]
-    )
+    keyboard.append([InlineKeyboardButton("Общее напоминание", callback_data="rem_med:0")])
     await update.message.reply_text(
-        "Выбери лекарство для напоминания:", reply_markup=InlineKeyboardMarkup(keyboard)
+        "Выбери препарат для напоминания:", reply_markup=InlineKeyboardMarkup(keyboard)
     )
     return ReminderState.PICK_MED
 
@@ -59,7 +105,7 @@ async def select_medication(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await query.answer()
     med_id = int(query.data.split(":")[1])
     context.user_data["reminder_payload"] = {"med_id": med_id or None}
-    await query.edit_message_text("Выбери тип расписания.", reply_markup=_schedule_keyboard())
+    await query.edit_message_text("Отлично! Теперь выбери тип расписания.", reply_markup=_schedule_keyboard())
     return ReminderState.SCHEDULE_TYPE
 
 
@@ -68,53 +114,49 @@ async def select_schedule_type(update: Update, context: ContextTypes.DEFAULT_TYP
     await query.answer()
     schedule_type = query.data.split(":")[1]
     context.user_data["reminder_payload"]["schedule_type"] = schedule_type
+
     if schedule_type in {"fixed_time", "weekly"}:
-        await query.edit_message_text("Укажи время в формате ЧЧ:ММ.")
+        await query.edit_message_text("Режим выбран.")
+        await query.message.reply_text(
+            "Укажи время в формате ЧЧ:ММ или выбери подходящую кнопку ниже.",
+            reply_markup=_quick_time_keyboard(),
+        )
         return ReminderState.TIME
     if schedule_type == "interval":
         await query.edit_message_text("Какой интервал в часах между приёмами?")
         return ReminderState.INTERVAL
     if schedule_type == "event":
-        await query.edit_message_text("Опиши событие и смещение, пример: 'После завтрака, +30'.")
+        await query.edit_message_text("Опиши событие и смещение, пример: «После завтрака, +30».")
         return ReminderState.EVENT
     if schedule_type == "geo":
         await query.edit_message_text("Отправь геолокацию места, где нужно напоминать.")
         return ReminderState.GEO
-    return -1
+    return ConversationHandler.END
 
 
 async def handle_time_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    text = update.message.text.strip()
-    try:
-        hour, minute = map(int, text.split(":"))
-        when = dt.time(hour=hour, minute=minute)
-    except Exception:
+    when = _parse_time(update.message.text)
+    if not when:
         await update.message.reply_text("Не получилось распознать время. Формат ЧЧ:ММ.")
         return ReminderState.TIME
     context.user_data["reminder_payload"]["time_of_day"] = when
-    if context.user_data["reminder_payload"]["schedule_type"] == "weekly":
+    schedule_type = context.user_data["reminder_payload"]["schedule_type"]
+    await update.message.reply_text(
+        f"Принял {when.strftime('%H:%M')}.",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    if schedule_type == "weekly":
         await update.message.reply_text("Укажи дни недели (пример: пн, ср, пт).")
         return ReminderState.DAYS
     return await _finalize_reminder(update, context)
 
 
 async def handle_days(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    text = update.message.text
-    mapping = {
-        "пн": "mon",
-        "вт": "tue",
-        "ср": "wed",
-        "чт": "thu",
-        "пт": "fri",
-        "сб": "sat",
-        "сбт": "sat",
-        "вс": "sun",
-    }
-    days = []
-    for token in text.split(","):
-        key = token.strip().lower()[:2]
-        days.append(mapping.get(key, token.strip().lower()[:3]))
-    context.user_data["reminder_payload"]["days_of_week"] = ",".join(days)
+    tokens = [token.strip().lower() for token in update.message.text.split(",")]
+    mapped = []
+    for token in tokens:
+        mapped.append(DAY_MAPPING.get(token[:3], token[:3]))
+    context.user_data["reminder_payload"]["days_of_week"] = ",".join(mapped)
     return await _finalize_reminder(update, context)
 
 
@@ -122,7 +164,7 @@ async def handle_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     try:
         interval = int(update.message.text.strip())
     except ValueError:
-        await update.message.reply_text("Нужно число часов.")
+        await update.message.reply_text("Нужно указать количество часов.")
         return ReminderState.INTERVAL
     context.user_data["reminder_payload"]["interval_hours"] = max(1, interval)
     return await _finalize_reminder(update, context)
@@ -132,8 +174,7 @@ async def handle_event(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     text = update.message.text
     if "," in text:
         event_label, offset = text.split(",", 1)
-        offset = offset.strip().replace("+", "")
-        digits = "".join(ch for ch in offset if ch.isdigit())
+        digits = "".join(ch for ch in offset if ch.isdigit() or ch == "-")
         minutes = int(digits) if digits else 0
     else:
         event_label = text
@@ -145,14 +186,14 @@ async def handle_event(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 async def handle_geo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if not update.message.location:
-        await update.message.reply_text("Пожалуйста, поделись геолокацией через кнопку.")
+        await update.message.reply_text("Пожалуйста, отправь геолокацию через кнопку.")
         return ReminderState.GEO
     context.user_data["reminder_payload"]["geo_lat"] = update.message.location.latitude
     context.user_data["reminder_payload"]["geo_lon"] = update.message.location.longitude
     return await _finalize_reminder(update, context)
 
 
-async def _finalize_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def _finalize_reminder(update, context) -> int:
     payload = context.user_data.get("reminder_payload", {})
     db = next(get_db())
     try:
@@ -171,7 +212,7 @@ async def _finalize_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE)
         db.close()
 
     context.user_data.pop("reminder_payload", None)
-    await update.message.reply_text("Напоминание сохранено! Я начну следить за временем.")
+    await update.message.reply_text("Напоминание сохранено! Я прослежу за временем.")
     return ConversationHandler.END
 
 
@@ -266,14 +307,13 @@ async def reminder_action(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         user = db.query(User).filter(User.id == log.user_id).first()
         if action == "take":
             reminder_service.update_log_status(db, log, "taken")
-            if reminder.medication:
+            if reminder and reminder.medication:
                 medication_service.consume_dose(db, reminder.medication)
             achievement_service.evaluate_user(db, user)
-            await query.edit_message_text("Отмечено! Молодец 👍")
+            await query.edit_message_text("Засчитано! Так держать.")
         elif action == "skip":
             reminder_service.update_log_status(db, log, "missed")
             await query.edit_message_text("Записал пропуск. Я напомню позже.")
-            await family_handlers.notify_caregivers(context, user.telegram_id, "❗ Пропущен важный приём.")
     finally:
         db.close()
 
@@ -305,4 +345,4 @@ async def reminder_snooze(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         )
     finally:
         db.close()
-    await query.edit_message_text(f"Отложил на {minutes} минут.")
+    await query.edit_message_text(f"Отложил на {minutes} мин.")

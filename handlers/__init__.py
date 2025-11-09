@@ -1,5 +1,5 @@
 from .states import SetupState, ReminderState, ProfileEditState
-from . import onboarding, profile, medications, reminders, stats, lifestyle, family, misc
+from . import onboarding, profile, medications, reminders, stats, lifestyle, misc
 
 __all__ = [
     "SetupState",
@@ -11,6 +11,5 @@ __all__ = [
     "reminders",
     "stats",
     "lifestyle",
-    "family",
     "misc",
 ]

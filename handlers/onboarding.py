@@ -16,19 +16,21 @@ from utils.timezone import resolve_timezone, timezone_from_location
 
 
 def _personality_keyboard() -> InlineKeyboardMarkup:
-    buttons = [
-        [InlineKeyboardButton(label, callback_data=f"persona:{slug}")]
-        for slug, label in PERSONALITY_CHOICES
-    ]
-    return InlineKeyboardMarkup(buttons)
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton(label, callback_data=f"persona:{slug}")]
+            for slug, label in PERSONALITY_CHOICES
+        ]
+    )
 
 
 def _theme_keyboard() -> InlineKeyboardMarkup:
-    buttons = [
-        [InlineKeyboardButton(label, callback_data=f"theme:{slug}")]
-        for slug, label in THEME_CHOICES
-    ]
-    return InlineKeyboardMarkup(buttons)
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton(label, callback_data=f"theme:{slug}")]
+            for slug, label in THEME_CHOICES
+        ]
+    )
 
 
 async def _prompt_personality(update: Update) -> int:
@@ -62,8 +64,8 @@ async def collect_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         one_time_keyboard=True,
     )
     await update.message.reply_text(
-        "Отправь точку на карте — так я определю твой часовой пояс и смогу напоминать вовремя.\n"
-        "Если не хочешь делиться геолокацией, просто напиши часовой пояс (например, Europe/Moscow).",
+        "Отправь точку на карте — так я определю твой часовой пояс и буду напоминать вовремя.\n"
+        "Если не хочешь делиться геолокацией, просто напиши часовой пояс вручную (например, Europe/Moscow).",
         reply_markup=keyboard,
     )
     return SetupState.TIMEZONE
@@ -74,13 +76,13 @@ async def collect_timezone_from_location(update: Update, context: ContextTypes.D
     timezone = timezone_from_location(location.latitude, location.longitude)
     if not timezone:
         await update.message.reply_text(
-            "Не получилось понять часовой пояс по координатам. Напиши его вручную, например Europe/Moscow.",
+            "Не удалось определить часовой пояс. Напиши его вручную в формате Europe/Moscow.",
             reply_markup=ReplyKeyboardRemove(),
         )
         return SetupState.TIMEZONE
     context.user_data["setup_timezone"] = timezone
     await update.message.reply_text(
-        f"Отлично, буду ориентироваться на {timezone}.",
+        f"Отлично, фиксирую {timezone}.",
         reply_markup=ReplyKeyboardRemove(),
     )
     return await _prompt_personality(update)
@@ -91,13 +93,13 @@ async def collect_timezone_from_text(update: Update, context: ContextTypes.DEFAU
     resolved = resolve_timezone(tz_value)
     if not resolved:
         await update.message.reply_text(
-            "Не удалось распознать часовой пояс. Укажи его в формате Europe/Moscow или отправь геолокацию.",
+            "Не удалось распознать часовой пояс. Напиши его в формате Europe/Moscow или отправь геолокацию.",
             reply_markup=ReplyKeyboardRemove(),
         )
         return SetupState.TIMEZONE
     context.user_data["setup_timezone"] = resolved
     await update.message.reply_text(
-        f"Супер, фиксирую {resolved}.",
+        f"Супер, буду использовать {resolved}.",
         reply_markup=ReplyKeyboardRemove(),
     )
     return await _prompt_personality(update)
@@ -115,11 +117,7 @@ async def collect_personality_choice(update: Update, context: ContextTypes.DEFAU
 
 async def collect_goal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["setup_goal"] = update.message.text.strip()
-    await update.message.reply_text(
-        "Выбери тему оформления:",
-        reply_markup=_theme_keyboard(),
-    )
-    return SetupState.THEME
+    return await _prompt_theme(update)
 
 
 async def collect_theme_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -127,9 +125,9 @@ async def collect_theme_choice(update: Update, context: ContextTypes.DEFAULT_TYP
     await query.answer()
     slug = query.data.split(":", 1)[1]
     context.user_data["setup_theme"] = slug
-    await query.edit_message_text("Тема оформления выбрана.")
+    await query.edit_message_text("Тема сохранена.")
     await query.message.reply_text(
-        "Последний шаг: напиши возраст и вес (например, 30, 70) или «-», если не хочешь делиться.",
+        "Последний штрих: укажи возраст и вес (например, 30, 70) или напиши «-», если не хочешь делиться.",
     )
     return SetupState.OPTIONAL
 
@@ -162,7 +160,7 @@ async def finalize_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         db.close()
 
     await update.message.reply_text(
-        "Профиль готов! Добавь лекарства через /add_med и я начну напоминать.",
+        "Готово! Теперь добавь лекарства через /add_med и я помогу выстроить режим.",
     )
     context.user_data.clear()
     return ConversationHandler.END

@@ -25,7 +25,6 @@ from handlers import (
     reminders,
     stats,
     lifestyle,
-    family,
     misc,
 )
 from models import Medication
@@ -99,9 +98,6 @@ def build_application() -> Application:
     application.add_handler(CommandHandler("symptom", lifestyle.symptom_command))
     application.add_handler(CommandHandler("mood", lifestyle.mood_command))
     application.add_handler(CommandHandler("water", lifestyle.water_command))
-    application.add_handler(CommandHandler("family", family.family_command))
-    application.add_handler(CommandHandler("family_invite", family.family_invite))
-    application.add_handler(CommandHandler("family_accept", family.family_accept))
 
     # Conversations
     setup_conv = ConversationHandler(

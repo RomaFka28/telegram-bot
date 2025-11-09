@@ -1,4 +1,4 @@
-from typing import Optional
+﻿from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -60,3 +60,4 @@ def update_profile(
     session.commit()
     session.refresh(user)
     return user
+

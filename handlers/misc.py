@@ -33,7 +33,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/achievements — достижения\n"
         "/export [json|csv] — экспорт данных\n"
         "/symptom /mood /water — трекеры\n"
-        "/family — семейный режим\n"
     )
     await update.message.reply_text(f"{DISCLAIMER}\n\n{commands}")
 
