@@ -3,6 +3,8 @@ from telegram import (
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
     KeyboardButton,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
 )
 from telegram.ext import ContextTypes, ConversationHandler
 
@@ -13,13 +15,36 @@ from utils.messages import DISCLAIMER, PERSONALITY_CHOICES, THEME_CHOICES
 from utils.timezone import resolve_timezone, timezone_from_location
 
 
+def _personality_keyboard() -> InlineKeyboardMarkup:
+    buttons = [
+        [InlineKeyboardButton(label, callback_data=f"persona:{slug}")]
+        for slug, label in PERSONALITY_CHOICES
+    ]
+    return InlineKeyboardMarkup(buttons)
+
+
+def _theme_keyboard() -> InlineKeyboardMarkup:
+    buttons = [
+        [InlineKeyboardButton(label, callback_data=f"theme:{slug}")]
+        for slug, label in THEME_CHOICES
+    ]
+    return InlineKeyboardMarkup(buttons)
+
+
 async def _prompt_personality(update: Update) -> int:
-    personas = "\n".join([f"- {title}" for _, title in PERSONALITY_CHOICES])
     await update.message.reply_text(
-        "Выбери стиль общения:\n" + personas,
-        reply_markup=ReplyKeyboardRemove(),
+        "Выбери стиль общения:",
+        reply_markup=_personality_keyboard(),
     )
     return SetupState.PERSONALITY
+
+
+async def _prompt_theme(update: Update) -> int:
+    await update.message.reply_text(
+        "Выбери тему оформления:",
+        reply_markup=_theme_keyboard(),
+    )
+    return SetupState.THEME
 
 
 async def start_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -78,42 +103,32 @@ async def collect_timezone_from_text(update: Update, context: ContextTypes.DEFAU
     return await _prompt_personality(update)
 
 
-async def collect_personality(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    choice = update.message.text.strip().lower()
-    slug = None
-    for key, label in PERSONALITY_CHOICES:
-        if choice == key or choice.lower() in label.lower():
-            slug = key
-            break
-    if not slug:
-        await update.message.reply_text("Пожалуйста, выбери один из вариантов из списка.")
-        return SetupState.PERSONALITY
+async def collect_personality_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+    slug = query.data.split(":", 1)[1]
     context.user_data["setup_personality"] = slug
-    await update.message.reply_text("Какая цель? Например: «30 дней без пропусков».")
+    await query.edit_message_text("Стиль общения выбран.")
+    await query.message.reply_text("Какая цель? Например: «30 дней без пропусков».")
     return SetupState.GOAL
 
 
 async def collect_goal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["setup_goal"] = update.message.text.strip()
-    themes = "\n".join([f"- {label}" for _, label in THEME_CHOICES])
     await update.message.reply_text(
-        "Выбери тему оформления (цвета/эмодзи):\n" + themes
+        "Выбери тему оформления:",
+        reply_markup=_theme_keyboard(),
     )
     return SetupState.THEME
 
 
-async def collect_theme(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    choice = update.message.text.strip().lower()
-    slug = None
-    for key, label in THEME_CHOICES:
-        if choice == key or choice.lower() in label.lower():
-            slug = key
-            break
-    if not slug:
-        await update.message.reply_text("Выбери тему из списка.")
-        return SetupState.THEME
+async def collect_theme_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+    slug = query.data.split(":", 1)[1]
     context.user_data["setup_theme"] = slug
-    await update.message.reply_text(
+    await query.edit_message_text("Тема оформления выбрана.")
+    await query.message.reply_text(
         "Последний шаг: напиши возраст и вес (например, 30, 70) или «-», если не хочешь делиться.",
     )
     return SetupState.OPTIONAL

@@ -11,10 +11,15 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     db = next(get_db())
     try:
         user = user_service.ensure_user(db, update.effective_user)
+        persona = user.bot_personality
+        display_name = user.name
     finally:
         db.close()
-    text = personality_text(user.bot_personality, "welcome", name=user.name) or "Привет!"
-    await update.message.reply_text(f"{DISCLAIMER}\n\n{text}\n\nИспользуй /setup чтобы пройти онбординг.")
+
+    text = personality_text(persona, "welcome", name=display_name) or "Привет!"
+    await update.message.reply_text(
+        f"{DISCLAIMER}\n\n{text}\n\nИспользуй /setup, чтобы пройти онбординг."
+    )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -22,12 +27,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/setup — онбординг\n"
         "/profile — профиль и настройки\n"
         "/add_med — добавить лекарство\n"
-        "/meds — каталог лекарств\n"
+        "/meds — список лекарств\n"
         "/set_reminder — настроить напоминание\n"
-        "/stats — статистика и графики\n"
-        "/achievements — значки\n"
-        "/export [json|csv] — экспорт\n"
-        "/symptom, /mood, /water — трекеры\n"
+        "/stats — статистика\n"
+        "/achievements — достижения\n"
+        "/export [json|csv] — экспорт данных\n"
+        "/symptom /mood /water — трекеры\n"
         "/family — семейный режим\n"
     )
     await update.message.reply_text(f"{DISCLAIMER}\n\n{commands}")
