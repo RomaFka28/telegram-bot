@@ -37,6 +37,7 @@ class ReminderScheduler:
                 "sat": 5,
                 "sun": 6,
             }
+            days = None
             if reminder.schedule_type == "weekly" and reminder.days_of_week:
                 days = tuple(
                     day_map[d.strip().lower()]
@@ -44,16 +45,16 @@ class ReminderScheduler:
                     if d.strip().lower() in day_map
                 )
                 if not days:
-                    days = tuple(range(7))
-            else:
-                days = tuple(range(7))
+                    days = None
             self.job_queue.run_daily(
                 self.callback,
                 time=reminder.time_of_day,
-                days=days,
                 data=data,
                 name=job_name,
-                job_kwargs={"timezone": tz},
+                job_kwargs={
+                    "timezone": tz,
+                    "day_of_week": ",".join(str(d) for d in days) if days else "*",
+                },
             )
         elif reminder.schedule_type == "interval" and reminder.interval_hours:
             self.job_queue.run_repeating(
