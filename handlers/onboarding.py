@@ -1,5 +1,6 @@
 from telegram import (
     Update,
+    Message,
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
     KeyboardButton,
@@ -53,7 +54,7 @@ async def _prompt_goal(update: Update) -> int:
     return SetupState.GOAL
 
 
-async def _prompt_final_step(message: Update | "telegram.Message") -> int:
+async def _prompt_final_step(message: Update | Message) -> int:
     await message.reply_text(
         "Последний шаг: укажи возраст и вес через пробел (например `30 70`).\n"
         "Если не хочешь делиться — напиши «-».",
