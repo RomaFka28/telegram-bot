@@ -49,9 +49,9 @@ class ReminderScheduler:
                 self.callback,
                 time=reminder.time_of_day,
                 days=days,
-                tzinfo=tz,
                 data=data,
                 name=job_name,
+                job_kwargs={"timezone": tz},
             )
         elif reminder.schedule_type == "interval" and reminder.interval_hours:
             self.job_queue.run_repeating(
