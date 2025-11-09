@@ -28,23 +28,25 @@ class ReminderScheduler:
         data = {"reminder_id": reminder.id}
 
         if reminder.schedule_type in {"fixed_time", "weekly"} and reminder.time_of_day:
-            days = None
+            day_map = {
+                "mon": 0,
+                "tue": 1,
+                "wed": 2,
+                "thu": 3,
+                "fri": 4,
+                "sat": 5,
+                "sun": 6,
+            }
             if reminder.schedule_type == "weekly" and reminder.days_of_week:
-                day_map = {
-                    "mon": 0,
-                    "tue": 1,
-                    "wed": 2,
-                    "thu": 3,
-                    "fri": 4,
-                    "sat": 5,
-                    "sun": 6,
-                }
                 days = tuple(
                     day_map[d.strip().lower()]
                     for d in reminder.days_of_week.split(",")
                     if d.strip().lower() in day_map
                 )
-                days = days or None
+                if not days:
+                    days = tuple(range(7))
+            else:
+                days = tuple(range(7))
             self.job_queue.run_daily(
                 self.callback,
                 time=reminder.time_of_day,
