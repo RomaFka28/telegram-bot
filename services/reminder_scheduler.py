@@ -1,3 +1,5 @@
+import datetime as dt
+
 import pytz
 from telegram.ext import JobQueue
 
@@ -46,11 +48,14 @@ class ReminderScheduler:
                 ]
                 if parsed_days:
                     days = tuple(parsed_days)
+            localized = tz.localize(
+                dt.datetime.combine(dt.date.today(), reminder.time_of_day)
+            )
+            time_utc = localized.astimezone(pytz.UTC).time()
             kwargs = {
-                "time": reminder.time_of_day,
+                "time": time_utc,
                 "data": data,
                 "name": job_name,
-                "job_kwargs": {"timezone": tz},
             }
             if days:
                 kwargs["days"] = days
