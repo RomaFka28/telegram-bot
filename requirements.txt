@@ -7,3 +7,4 @@ matplotlib==3.8.2
 fastapi==0.110.0
 uvicorn==0.24.0.post1
 psycopg2-binary==2.9.9
+timezonefinder==6.2.0

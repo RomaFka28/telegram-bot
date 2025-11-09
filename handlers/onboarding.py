@@ -1,43 +1,81 @@
-import pytz
-from telegram import Update
+from telegram import (
+    Update,
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+    KeyboardButton,
+)
 from telegram.ext import ContextTypes, ConversationHandler
 
 from database import get_db
 from services import user_service
 from handlers.states import SetupState
 from utils.messages import DISCLAIMER, PERSONALITY_CHOICES, THEME_CHOICES
+from utils.timezone import resolve_timezone, timezone_from_location
+
+
+async def _prompt_personality(update: Update) -> int:
+    personas = "\n".join([f"- {title}" for _, title in PERSONALITY_CHOICES])
+    await update.message.reply_text(
+        "Выбери стиль общения:\n" + personas,
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    return SetupState.PERSONALITY
 
 
 async def start_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
-        f"{DISCLAIMER}\n\nКак тебя зовут?",
+        f"{DISCLAIMER}\n\nПривет! Как тебя зовут?",
     )
     return SetupState.NAME
 
 
 async def collect_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["setup_name"] = update.message.text.strip()
+    keyboard = ReplyKeyboardMarkup(
+        [[KeyboardButton("📍 Поделиться геолокацией", request_location=True)]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
     await update.message.reply_text(
-        "Укажи свой часовой пояс (например, Europe/Moscow)."
+        "Отправь точку на карте — так я определю твой часовой пояс и смогу напоминать вовремя.\n"
+        "Если не хочешь делиться геолокацией, просто напиши часовой пояс (например, Europe/Moscow).",
+        reply_markup=keyboard,
     )
     return SetupState.TIMEZONE
 
 
-async def collect_timezone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    tz_value = update.message.text.strip()
-    try:
-        pytz.timezone(tz_value)
-    except pytz.UnknownTimeZoneError:
+async def collect_timezone_from_location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    location = update.message.location
+    timezone = timezone_from_location(location.latitude, location.longitude)
+    if not timezone:
         await update.message.reply_text(
-            "Не удалось распознать часовой пояс. Попробуй ещё раз (пример: Europe/Moscow)."
+            "Не получилось понять часовой пояс по координатам. Напиши его вручную, например Europe/Moscow.",
+            reply_markup=ReplyKeyboardRemove(),
         )
         return SetupState.TIMEZONE
-    context.user_data["setup_timezone"] = tz_value
-    personas = "\n".join([f"- {title}" for _, title in PERSONALITY_CHOICES])
+    context.user_data["setup_timezone"] = timezone
     await update.message.reply_text(
-        "Выбери стиль общения:\n" + personas
+        f"Отлично, буду ориентироваться на {timezone}.",
+        reply_markup=ReplyKeyboardRemove(),
     )
-    return SetupState.PERSONALITY
+    return await _prompt_personality(update)
+
+
+async def collect_timezone_from_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    tz_value = update.message.text.strip()
+    resolved = resolve_timezone(tz_value)
+    if not resolved:
+        await update.message.reply_text(
+            "Не удалось распознать часовой пояс. Укажи его в формате Europe/Moscow или отправь геолокацию.",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        return SetupState.TIMEZONE
+    context.user_data["setup_timezone"] = resolved
+    await update.message.reply_text(
+        f"Супер, фиксирую {resolved}.",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    return await _prompt_personality(update)
 
 
 async def collect_personality(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -51,7 +89,7 @@ async def collect_personality(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("Пожалуйста, выбери один из вариантов из списка.")
         return SetupState.PERSONALITY
     context.user_data["setup_personality"] = slug
-    await update.message.reply_text("Какую цель поставим? (например, 30 дней без пропусков)")
+    await update.message.reply_text("Какая цель? Например: «30 дней без пропусков».")
     return SetupState.GOAL
 
 
@@ -59,7 +97,7 @@ async def collect_goal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     context.user_data["setup_goal"] = update.message.text.strip()
     themes = "\n".join([f"- {label}" for _, label in THEME_CHOICES])
     await update.message.reply_text(
-        "Выбери тему оформления (эмодзи/цвет):\n" + themes
+        "Выбери тему оформления (цвета/эмодзи):\n" + themes
     )
     return SetupState.THEME
 
@@ -76,7 +114,7 @@ async def collect_theme(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         return SetupState.THEME
     context.user_data["setup_theme"] = slug
     await update.message.reply_text(
-        "Последний штрих: укажи возраст и вес (формат: 30, 70) или напиши '-' если не хочешь делиться."
+        "Последний шаг: напиши возраст и вес (например, 30, 70) или «-», если не хочешь делиться.",
     )
     return SetupState.OPTIONAL
 
@@ -109,7 +147,7 @@ async def finalize_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         db.close()
 
     await update.message.reply_text(
-        "Профиль готов! Добавь лекарства через /add_med и я настрою напоминания."
+        "Профиль готов! Добавь лекарства через /add_med и я начну напоминать.",
     )
     context.user_data.clear()
     return ConversationHandler.END

@@ -108,7 +108,10 @@ def build_application() -> Application:
         entry_points=[CommandHandler("setup", onboarding.start_setup)],
         states={
             SetupState.NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding.collect_name)],
-            SetupState.TIMEZONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding.collect_timezone)],
+            SetupState.TIMEZONE: [
+                MessageHandler(filters.LOCATION, onboarding.collect_timezone_from_location),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding.collect_timezone_from_text),
+            ],
             SetupState.PERSONALITY: [MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding.collect_personality)],
             SetupState.GOAL: [MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding.collect_goal)],
             SetupState.THEME: [MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding.collect_theme)],
