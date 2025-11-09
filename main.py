@@ -109,8 +109,10 @@ def build_application() -> Application:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding.collect_timezone_from_text),
             ],
             SetupState.PERSONALITY: [CallbackQueryHandler(onboarding.collect_personality_choice, pattern="^persona:")],
-            SetupState.GOAL: [MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding.collect_goal)],
-            SetupState.THEME: [CallbackQueryHandler(onboarding.collect_theme_choice, pattern="^theme:")],
+            SetupState.GOAL: [
+                CallbackQueryHandler(onboarding.collect_goal_choice, pattern="^goal:"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding.collect_goal),
+            ],
             SetupState.OPTIONAL: [MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding.finalize_setup)],
         },
         fallbacks=[CommandHandler("cancel", misc.cancel)],

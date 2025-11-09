@@ -11,42 +11,55 @@ from telegram.ext import ContextTypes, ConversationHandler
 from database import get_db
 from services import user_service
 from handlers.states import SetupState
-from utils.messages import DISCLAIMER, PERSONALITY_CHOICES, THEME_CHOICES
+from utils.messages import DISCLAIMER, PERSONALITY_CHOICES
 from utils.timezone import resolve_timezone, timezone_from_location
+
+GOAL_PRESETS = [
+    ("goal:discipline", "30 дней без пропусков"),
+    ("goal:hydration", "Выпивать 2 литра воды"),
+    ("goal:energy", "Больше энергии днём"),
+    ("goal:sleep", "Стабильный сон"),
+    ("goal:custom", "Своя цель"),
+]
 
 
 def _personality_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton(label, callback_data=f"persona:{slug}")]
-            for slug, label in PERSONALITY_CHOICES
-        ]
+        [[InlineKeyboardButton(label, callback_data=f"persona:{slug}")]
+         for slug, label in PERSONALITY_CHOICES]
     )
 
 
-def _theme_keyboard() -> InlineKeyboardMarkup:
+def _goal_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton(label, callback_data=f"theme:{slug}")]
-            for slug, label in THEME_CHOICES
-        ]
+        [[InlineKeyboardButton(label, callback_data=slug)] for slug, label in GOAL_PRESETS]
     )
 
 
 async def _prompt_personality(update: Update) -> int:
     await update.message.reply_text(
-        "Выбери стиль общения:",
+        "Выбери стиль общения, чтобы я знал, как лучше мотивировать:",
         reply_markup=_personality_keyboard(),
     )
     return SetupState.PERSONALITY
 
 
-async def _prompt_theme(update: Update) -> int:
+async def _prompt_goal(update: Update) -> int:
     await update.message.reply_text(
-        "Выбери тему оформления:",
-        reply_markup=_theme_keyboard(),
+        "Какая цель на ближайшее время?\n"
+        "Можешь выбрать готовую или написать свою.",
+        reply_markup=_goal_keyboard(),
     )
-    return SetupState.THEME
+    return SetupState.GOAL
+
+
+async def _prompt_final_step(message: Update | "telegram.Message") -> int:
+    await message.reply_text(
+        "Последний шаг: укажи возраст и вес через пробел (например `30 70`).\n"
+        "Если не хочешь делиться — напиши «-».",
+        parse_mode="Markdown",
+    )
+    return SetupState.OPTIONAL
 
 
 async def start_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -59,13 +72,13 @@ async def start_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 async def collect_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["setup_name"] = update.message.text.strip()
     keyboard = ReplyKeyboardMarkup(
-        [[KeyboardButton("📍 Поделиться геолокацией", request_location=True)]],
+        [[KeyboardButton("📍 Отправить геолокацию", request_location=True)]],
         resize_keyboard=True,
         one_time_keyboard=True,
     )
     await update.message.reply_text(
-        "Отправь точку на карте — так я определю твой часовой пояс и буду напоминать вовремя.\n"
-        "Если не хочешь делиться геолокацией, просто напиши часовой пояс вручную (например, Europe/Moscow).",
+        "Отправь точку на карте — так я точно определю часовой пояс и напоминания будут вовремя.\n"
+        "Если удобнее, просто напиши город (например, Томск или Казань).",
         reply_markup=keyboard,
     )
     return SetupState.TIMEZONE
@@ -82,7 +95,7 @@ async def collect_timezone_from_location(update: Update, context: ContextTypes.D
         return SetupState.TIMEZONE
     context.user_data["setup_timezone"] = timezone
     await update.message.reply_text(
-        f"Отлично, фиксирую {timezone}.",
+        f"Использую часовой пояс {timezone}.",
         reply_markup=ReplyKeyboardRemove(),
     )
     return await _prompt_personality(update)
@@ -93,13 +106,13 @@ async def collect_timezone_from_text(update: Update, context: ContextTypes.DEFAU
     resolved = resolve_timezone(tz_value)
     if not resolved:
         await update.message.reply_text(
-            "Не удалось распознать часовой пояс. Напиши его в формате Europe/Moscow или отправь геолокацию.",
+            "Не получилось распознать часовой пояс. Напиши его в формате Europe/Moscow или отправь геолокацию.",
             reply_markup=ReplyKeyboardRemove(),
         )
         return SetupState.TIMEZONE
     context.user_data["setup_timezone"] = resolved
     await update.message.reply_text(
-        f"Супер, буду использовать {resolved}.",
+        f"Отлично, записываю {resolved}.",
         reply_markup=ReplyKeyboardRemove(),
     )
     return await _prompt_personality(update)
@@ -110,33 +123,33 @@ async def collect_personality_choice(update: Update, context: ContextTypes.DEFAU
     await query.answer()
     slug = query.data.split(":", 1)[1]
     context.user_data["setup_personality"] = slug
-    await query.edit_message_text("Стиль общения выбран.")
-    await query.message.reply_text("Какая цель? Например: «30 дней без пропусков».")
-    return SetupState.GOAL
+    await query.edit_message_text("Стиль общения сохранён.")
+    return await _prompt_goal(query.message)
+
+
+async def collect_goal_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+    slug = query.data
+    preset_map = dict(GOAL_PRESETS)
+    if slug == "goal:custom":
+        await query.edit_message_text("Напиши свою цель в следующем сообщении.")
+        return SetupState.GOAL
+    context.user_data["setup_goal"] = preset_map.get(slug, "")
+    await query.edit_message_text(f"Цель «{preset_map.get(slug)}» сохранена.")
+    return await _prompt_final_step(query.message)
 
 
 async def collect_goal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["setup_goal"] = update.message.text.strip()
-    return await _prompt_theme(update)
-
-
-async def collect_theme_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    query = update.callback_query
-    await query.answer()
-    slug = query.data.split(":", 1)[1]
-    context.user_data["setup_theme"] = slug
-    await query.edit_message_text("Тема сохранена.")
-    await query.message.reply_text(
-        "Последний штрих: укажи возраст и вес (например, 30, 70) или напиши «-», если не хочешь делиться.",
-    )
-    return SetupState.OPTIONAL
+    return await _prompt_final_step(update.message)
 
 
 async def finalize_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     text = update.message.text.strip()
     age = weight = None
     if text != "-":
-        parts = [part.strip() for part in text.replace(";", ",").split(",")]
+        parts = text.replace(",", " ").split()
         if len(parts) >= 1 and parts[0].isdigit():
             age = int(parts[0])
         if len(parts) >= 2 and parts[1].isdigit():
@@ -152,7 +165,6 @@ async def finalize_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             timezone=context.user_data.get("setup_timezone"),
             personality=context.user_data.get("setup_personality"),
             goal=context.user_data.get("setup_goal"),
-            theme=context.user_data.get("setup_theme"),
             age=age,
             weight=weight,
         )
@@ -160,7 +172,8 @@ async def finalize_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         db.close()
 
     await update.message.reply_text(
-        "Готово! Теперь добавь лекарства через /add_med и я помогу выстроить режим.",
+        "Отлично! Профиль настроен. Добавь препараты через /add_med и я начну заботу.",
+        reply_markup=ReplyKeyboardRemove(),
     )
     context.user_data.clear()
     return ConversationHandler.END

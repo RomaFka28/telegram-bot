@@ -7,18 +7,46 @@ from timezonefinder import TimezoneFinder
 _CITY_ALIASES = {
     "moscow": "Europe/Moscow",
     "moskva": "Europe/Moscow",
+    "москва": "Europe/Moscow",
     "spb": "Europe/Moscow",
     "saint petersburg": "Europe/Moscow",
     "sankt-peterburg": "Europe/Moscow",
+    "санкт-петербург": "Europe/Moscow",
+    "питер": "Europe/Moscow",
     "petersburg": "Europe/Moscow",
     "novosibirsk": "Asia/Novosibirsk",
+    "новосибирск": "Asia/Novosibirsk",
     "ekaterinburg": "Asia/Yekaterinburg",
     "yekaterinburg": "Asia/Yekaterinburg",
+    "екатеринбург": "Asia/Yekaterinburg",
+    "пермь": "Asia/Yekaterinburg",
+    "челябинск": "Asia/Yekaterinburg",
+    "уфа": "Asia/Yekaterinburg",
+    "samara": "Europe/Samara",
+    "самара": "Europe/Samara",
     "tomsk": "Asia/Tomsk",
+    "томск": "Asia/Tomsk",
     "omsk": "Asia/Omsk",
+    "омск": "Asia/Omsk",
     "krasnoyarsk": "Asia/Krasnoyarsk",
+    "красноярск": "Asia/Krasnoyarsk",
     "kazan": "Europe/Moscow",
+    "казань": "Europe/Moscow",
     "sochi": "Europe/Moscow",
+    "сочи": "Europe/Moscow",
+    "rostov-na-donu": "Europe/Moscow",
+    "ростов-на-дону": "Europe/Moscow",
+    "rostov": "Europe/Moscow",
+    "voronezh": "Europe/Moscow",
+    "воронеж": "Europe/Moscow",
+    "nizhny novgorod": "Europe/Moscow",
+    "нижний новгород": "Europe/Moscow",
+    "irkutsk": "Asia/Irkutsk",
+    "иркутск": "Asia/Irkutsk",
+    "vladivostok": "Asia/Vladivostok",
+    "владивосток": "Asia/Vladivostok",
+    "kaliningrad": "Europe/Kaliningrad",
+    "калининград": "Europe/Kaliningrad",
 }
 
 _tz_finder = TimezoneFinder()
@@ -27,7 +55,7 @@ _tz_finder = TimezoneFinder()
 def resolve_timezone(value: str) -> Optional[str]:
     if not value:
         return None
-    key = value.strip().lower()
+    key = value.strip().lower().replace("ё", "е")
     alias = _CITY_ALIASES.get(key)
     if alias:
         return alias

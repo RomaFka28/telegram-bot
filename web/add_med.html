@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Health Buddy · Добавить препарат</title>
+    <title>ChronicaCare · Добавить препарат</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,13 +22,10 @@
             color-scheme: dark;
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
-            padding: 0;
             min-height: 100vh;
             background: linear-gradient(145deg, #0f1624, #111827 40%, #090f1d);
             font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -53,17 +50,8 @@
             box-shadow: 0 20px 45px rgba(9, 12, 22, 0.6);
         }
 
-        .hero h1 {
-            margin: 0;
-            font-size: 22px;
-            font-weight: 600;
-        }
-
-        .hero p {
-            margin: 8px 0 0;
-            color: var(--muted);
-            font-size: 14px;
-        }
+        .hero h1 { margin: 0; font-size: 22px; font-weight: 600; }
+        .hero p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
 
         .card {
             background: var(--card);
@@ -107,20 +95,15 @@
             background: rgba(93, 225, 255, 0.08);
         }
 
-        textarea {
-            min-height: 90px;
-            resize: vertical;
+        select option {
+            background: #0f172a;
+            color: #f8fafc;
         }
 
-        .row {
-            display: flex;
-            gap: 14px;
-            flex-wrap: wrap;
-        }
+        textarea { min-height: 90px; resize: vertical; }
 
-        .field {
-            flex: 1 1 160px;
-        }
+        .row { display: flex; gap: 14px; flex-wrap: wrap; }
+        .field { flex: 1 1 160px; }
 
         .helper {
             font-size: 12px;
@@ -150,21 +133,9 @@
             box-shadow: 0 6px 15px rgba(48, 201, 255, 0.25);
         }
 
-        select {
-            appearance: none;
-            background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-            background-position: calc(100% - 18px) calc(50% - 4px), calc(100% - 13px) calc(50% - 4px);
-            background-size: 6px 6px, 6px 6px;
-            background-repeat: no-repeat;
-        }
-
         @media (max-width: 420px) {
-            .card {
-                padding: 18px;
-            }
-            .app {
-                padding: 20px 14px 26px;
-            }
+            .card { padding: 18px; }
+            .app { padding: 20px 14px 26px; }
         }
     </style>
 </head>
@@ -172,7 +143,7 @@
     <div class="app">
         <div class="hero">
             <h1>Добавить препарат</h1>
-            <p>Одна форма — и я начну учитывать дозировки, остатки и напоминания.</p>
+            <p>Заполни форму — и ChronicaCare начнёт учитывать дозировки, остатки и напоминания.</p>
         </div>
 
         <form class="card" id="med-form">
@@ -199,6 +170,7 @@
                 <option value="БАД">БАД</option>
                 <option value="Другое">Другое</option>
             </select>
+            <p class="helper">Категория помогает подобрать стиль подсказок и учёта запасов.</p>
 
             <div class="section-title">Дозы</div>
             <div class="row">
@@ -228,7 +200,8 @@
             <textarea id="notes" placeholder="Особые инструкции, код цвета и т.д."></textarea>
 
             <label for="photo_file_id">ID фото (опционально)</label>
-            <input type="text" id="photo_file_id" placeholder="Можно отправить фото отдельно боту">
+            <input type="text" id="photo_file_id" placeholder="Можно вставить file_id из ответа бота">
+            <p class="helper">Отправь фото упаковки в чат с ботом — он вернёт `file_id`. Скопируй его и вставь сюда.</p>
 
             <button type="submit">Сохранить препарат</button>
         </form>

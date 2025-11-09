@@ -1,4 +1,4 @@
-from telegram import Update
+from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 
 from database import get_db
@@ -17,8 +17,13 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         db.close()
 
     text = personality_text(persona, "welcome", name=display_name) or "Привет!"
+    keyboard = ReplyKeyboardMarkup(
+        [["/setup", "/add_med"], ["/meds", "/set_reminder"]],
+        resize_keyboard=True,
+    )
     await update.message.reply_text(
-        f"{DISCLAIMER}\n\n{text}\n\nИспользуй /setup, чтобы пройти онбординг."
+        f"{DISCLAIMER}\n\n{text}\n\nИспользуй /setup, чтобы пройти онбординг.",
+        reply_markup=keyboard,
     )
 
 

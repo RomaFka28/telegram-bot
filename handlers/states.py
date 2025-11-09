@@ -6,7 +6,6 @@ class SetupState(IntEnum):
     TIMEZONE = auto()
     PERSONALITY = auto()
     GOAL = auto()
-    THEME = auto()
     OPTIONAL = auto()
 
 
