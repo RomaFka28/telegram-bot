@@ -16,7 +16,6 @@ class ReminderState(IntEnum):
     DAYS = auto()
     INTERVAL = auto()
     EVENT = auto()
-    GEO = auto()
     CONFIRM = auto()
 
 
@@ -27,3 +26,7 @@ class ProfileEditState(IntEnum):
 class SymptomState(IntEnum):
     DESCRIPTION = auto()
     SEVERITY = auto()
+
+
+class StockEditState(IntEnum):
+    VALUE = auto()

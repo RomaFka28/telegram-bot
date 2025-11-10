@@ -20,6 +20,7 @@ from handlers import (
     SetupState,
     ReminderState,
     ProfileEditState,
+    StockEditState,
     onboarding,
     profile,
     medications,
@@ -60,8 +61,8 @@ async def stock_watch_job(context):
                                 url="https://www.google.com/maps/search/%D0%B0%D0%BF%D1%82%D0%B5%D0%BA%D0%B0/",
                             ),
                             InlineKeyboardButton(
-                                "Заметка врачу",
-                                url="https://t.me/share/url?text=%D0%9F%D0%BE%D0%B7%D0%B2%D0%BE%D0%BD%D0%B8%D1%82%D1%8C%20%D0%B2%D1%80%D0%B0%D1%87%D1%83%20%D0%B7%D0%B0%20%D1%80%D0%B5%D1%86%D0%B5%D0%BF%D1%82%D0%BE%D0%BC",
+                                "Изменить остаток",
+                                callback_data=f"med_stock:{med.id}",
                             ),
                         ]
                     ]
@@ -92,6 +93,7 @@ def build_application() -> Application:
     application.add_handler(CommandHandler("add_med", medications.add_med_command))
     application.add_handler(CommandHandler("meds", medications.list_meds))
     application.add_handler(CommandHandler("restock", medications.restock_command))
+    application.add_handler(CommandHandler("set_stock", medications.set_stock_command))
     application.add_handler(CommandHandler("restock_history", medications.restock_history))
     application.add_handler(CommandHandler("stats", stats.stats_command))
     application.add_handler(CommandHandler("achievements", stats.achievements_command))
@@ -138,10 +140,6 @@ def build_application() -> Application:
             ReminderState.DAYS: [MessageHandler(filters.TEXT & ~filters.COMMAND, reminders.handle_days)],
             ReminderState.INTERVAL: [MessageHandler(filters.TEXT & ~filters.COMMAND, reminders.handle_interval)],
             ReminderState.EVENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, reminders.handle_event)],
-            ReminderState.GEO: [
-                MessageHandler(filters.LOCATION, reminders.handle_geo),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, reminders.handle_geo),
-            ],
         },
         fallbacks=[CommandHandler("cancel", misc.cancel)],
     )
@@ -155,6 +153,15 @@ def build_application() -> Application:
         fallbacks=[CommandHandler("cancel", misc.cancel)],
     )
     application.add_handler(profile_conv)
+
+    stock_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(medications.stock_edit_start, pattern="^med_stock:")],
+        states={
+            StockEditState.VALUE: [MessageHandler(filters.TEXT & ~filters.COMMAND, medications.stock_edit_apply)],
+        },
+        fallbacks=[CommandHandler("cancel", misc.cancel)],
+    )
+    application.add_handler(stock_conv)
 
     # Inline callbacks
     application.add_handler(CallbackQueryHandler(medications.med_callback, pattern="^med_"))
