@@ -15,7 +15,7 @@ STATS_BUTTON = "📈 Статистика"
 
 def _keyboard(onboarded: bool) -> ReplyKeyboardMarkup:
     if not onboarded:
-        return ReplyKeyboardMarkup([[SETUP_BUTTON, ADD_BUTTON]], resize_keyboard=True, one_time_keyboard=True)
+        return ReplyKeyboardMarkup([[SETUP_BUTTON]], resize_keyboard=True, one_time_keyboard=True)
     return ReplyKeyboardMarkup(
         [
             [ADD_BUTTON, LIST_BUTTON],
@@ -39,7 +39,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     keyboard = _keyboard(onboarded)
     await update.message.reply_text(
         f"{DISCLAIMER}\n\n{text}\n\n"
-        "Нажимай кнопки, чтобы всё сделать быстрее. Если что-то пойдёт не так — просто напиши команду вручную.",
+        "Нажимай кнопки ниже — так быстрее. Если нужно вручную, просто напиши команду.",
         reply_markup=keyboard,
     )
 

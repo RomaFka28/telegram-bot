@@ -166,9 +166,11 @@ async def restock_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await update.message.reply_text("Недостаточно прав.")
             return
         medication_service.restock_medication(db, medication, quantity, note)
+        snapshot = _format_med_message(medication)
     finally:
         db.close()
     await update.message.reply_text("Запас обновлён.")
+    await update.message.reply_text(snapshot, reply_markup=_med_inline_keyboard(medication))
 
 
 async def set_stock_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -193,9 +195,11 @@ async def set_stock_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             return
         medication.stock_remaining = max(0.0, value)
         db.commit()
+        snapshot = _format_med_message(medication)
     finally:
         db.close()
     await update.message.reply_text(f"Остаток установлен: {value:g}")
+    await update.message.reply_text(snapshot, reply_markup=_med_inline_keyboard(medication))
 
 
 async def restock_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -300,5 +304,9 @@ async def stock_edit_apply(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await update.message.reply_text(
         f"Остаток обновлён. Текущее значение: {new_value:g}",
         reply_markup=ReplyKeyboardRemove(),
+    )
+    await update.message.reply_text(
+        _format_med_message(medication),
+        reply_markup=_med_inline_keyboard(medication),
     )
     return ConversationHandler.END
