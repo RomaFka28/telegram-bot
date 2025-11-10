@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import re
 from functools import partial
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -99,9 +100,18 @@ def build_application() -> Application:
     application.add_handler(CommandHandler("mood", lifestyle.mood_command))
     application.add_handler(CommandHandler("water", lifestyle.water_command))
 
+    shortcut_setup_regex = filters.Regex(f"^{re.escape(misc.SETUP_BUTTON)}$")
+    shortcut_add_regex = filters.Regex(f"^{re.escape(misc.ADD_BUTTON)}$")
+    shortcut_list_regex = filters.Regex(f"^{re.escape(misc.LIST_BUTTON)}$")
+    shortcut_reminder_regex = filters.Regex(f"^{re.escape(misc.REMINDER_BUTTON)}$")
+    shortcut_stats_regex = filters.Regex(f"^{re.escape(misc.STATS_BUTTON)}$")
+
     # Conversations
     setup_conv = ConversationHandler(
-        entry_points=[CommandHandler("setup", onboarding.start_setup)],
+        entry_points=[
+            CommandHandler("setup", onboarding.start_setup),
+            MessageHandler(shortcut_setup_regex, onboarding.start_setup),
+        ],
         states={
             SetupState.NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding.collect_name)],
             SetupState.TIMEZONE: [
@@ -153,6 +163,11 @@ def build_application() -> Application:
 
     # WebApp payload
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, medications.handle_webapp_payload))
+    application.add_handler(MessageHandler(filters.PHOTO, misc.handle_photo))
+    application.add_handler(MessageHandler(shortcut_add_regex, medications.add_med_command))
+    application.add_handler(MessageHandler(shortcut_list_regex, medications.list_meds))
+    application.add_handler(MessageHandler(shortcut_reminder_regex, reminders.start_reminder_setup))
+    application.add_handler(MessageHandler(shortcut_stats_regex, stats.stats_command))
 
     scheduler = ReminderScheduler(application.job_queue, reminders.reminder_job_callback)
     application.bot_data["reminder_scheduler"] = scheduler

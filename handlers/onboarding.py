@@ -37,26 +37,25 @@ def _goal_keyboard() -> InlineKeyboardMarkup:
     )
 
 
-async def _prompt_personality(update: Update) -> int:
-    await update.message.reply_text(
-        "Выбери стиль общения, чтобы я знал, как лучше мотивировать:",
+async def _prompt_personality(message: Message) -> int:
+    await message.reply_text(
+        "Выбери стиль общения — так я пойму, как лучше мотивировать:",
         reply_markup=_personality_keyboard(),
     )
     return SetupState.PERSONALITY
 
 
-async def _prompt_goal(update: Update) -> int:
-    await update.message.reply_text(
-        "Какая цель на ближайшее время?\n"
-        "Можешь выбрать готовую или написать свою.",
+async def _prompt_goal(message: Message) -> int:
+    await message.reply_text(
+        "Какая цель на ближайшее время? Можно выбрать из вариантов или написать свою.",
         reply_markup=_goal_keyboard(),
     )
     return SetupState.GOAL
 
 
-async def _prompt_final_step(message: Update | Message) -> int:
+async def _prompt_final_step(message: Message) -> int:
     await message.reply_text(
-        "Последний шаг: укажи возраст и вес через пробел (например `30 70`).\n"
+        "Последний штрих: укажи возраст и вес через пробел (пример: `30 70`).\n"
         "Если не хочешь делиться — напиши «-».",
         parse_mode="Markdown",
     )
@@ -73,13 +72,13 @@ async def start_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 async def collect_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["setup_name"] = update.message.text.strip()
     keyboard = ReplyKeyboardMarkup(
-        [[KeyboardButton("📍 Отправить геолокацию", request_location=True)]],
+        [[KeyboardButton("📍 Поделиться локацией", request_location=True)]],
         resize_keyboard=True,
         one_time_keyboard=True,
     )
     await update.message.reply_text(
-        "Отправь точку на карте — так я точно определю часовой пояс и напоминания будут вовремя.\n"
-        "Если удобнее, просто напиши город (например, Томск или Казань).",
+        "Отправь точку на карте — так я точно определю часовой пояс и буду напоминать вовремя.\n"
+        "Если не хочется делиться геолокацией, просто напиши город (например: Томск, Казань, Владивосток).",
         reply_markup=keyboard,
     )
     return SetupState.TIMEZONE
@@ -90,16 +89,16 @@ async def collect_timezone_from_location(update: Update, context: ContextTypes.D
     timezone = timezone_from_location(location.latitude, location.longitude)
     if not timezone:
         await update.message.reply_text(
-            "Не удалось определить часовой пояс. Напиши его вручную в формате Europe/Moscow.",
+            "Не получилось определить часовой пояс. Напиши его вручную в формате Europe/Moscow или укажи город.",
             reply_markup=ReplyKeyboardRemove(),
         )
         return SetupState.TIMEZONE
     context.user_data["setup_timezone"] = timezone
     await update.message.reply_text(
-        f"Использую часовой пояс {timezone}.",
+        f"Отлично, буду ориентироваться на {timezone}.",
         reply_markup=ReplyKeyboardRemove(),
     )
-    return await _prompt_personality(update)
+    return await _prompt_personality(update.message)
 
 
 async def collect_timezone_from_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -107,16 +106,16 @@ async def collect_timezone_from_text(update: Update, context: ContextTypes.DEFAU
     resolved = resolve_timezone(tz_value)
     if not resolved:
         await update.message.reply_text(
-            "Не получилось распознать часовой пояс. Напиши его в формате Europe/Moscow или отправь геолокацию.",
+            "Не нашёл такой город/пояс. Напиши в формате Europe/Moscow или отправь геолокацию.",
             reply_markup=ReplyKeyboardRemove(),
         )
         return SetupState.TIMEZONE
     context.user_data["setup_timezone"] = resolved
     await update.message.reply_text(
-        f"Отлично, записываю {resolved}.",
+        f"Супер, фиксирую {resolved}.",
         reply_markup=ReplyKeyboardRemove(),
     )
-    return await _prompt_personality(update)
+    return await _prompt_personality(update.message)
 
 
 async def collect_personality_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -134,7 +133,7 @@ async def collect_goal_choice(update: Update, context: ContextTypes.DEFAULT_TYPE
     slug = query.data
     preset_map = dict(GOAL_PRESETS)
     if slug == "goal:custom":
-        await query.edit_message_text("Напиши свою цель в следующем сообщении.")
+        await query.edit_message_text("Расскажи, к чему стремишься. Напиши цель в следующем сообщении.")
         return SetupState.GOAL
     context.user_data["setup_goal"] = preset_map.get(slug, "")
     await query.edit_message_text(f"Цель «{preset_map.get(slug)}» сохранена.")
@@ -173,7 +172,7 @@ async def finalize_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         db.close()
 
     await update.message.reply_text(
-        "Отлично! Профиль настроен. Добавь препараты через /add_med и я начну заботу.",
+        "Готово! Профиль настроен. Добавь препараты через /add_med и я начну заботу.",
         reply_markup=ReplyKeyboardRemove(),
     )
     context.user_data.clear()
