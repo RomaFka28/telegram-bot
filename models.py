@@ -43,6 +43,7 @@ class User(Base, TimestampMixin):
     last_location_lat = Column(Float, nullable=True)
     last_location_lon = Column(Float, nullable=True)
     last_check_in = Column(DateTime, nullable=True)
+    profile_update_notifications = Column(Boolean, default=True)
 
     medications = relationship(
         "Medication", back_populates="user", cascade="all, delete-orphan"

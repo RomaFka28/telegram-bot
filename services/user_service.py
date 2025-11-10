@@ -21,7 +21,7 @@ def ensure_user(session: Session, telegram_user) -> User:
     user = User(
         telegram_id=telegram_user.id,
         username=telegram_user.username,
-        name=telegram_user.full_name or telegram_user.first_name or "Дружище",
+        name=telegram_user.full_name or telegram_user.first_name or "друг",
         timezone="UTC",
         bot_personality=DEFAULT_PERSONALITY,
     )
@@ -42,6 +42,7 @@ def update_profile(
     theme: Optional[str] = None,
     age: Optional[int] = None,
     weight: Optional[int] = None,
+    profile_update_notifications: Optional[bool] = None,
 ) -> User:
     if name:
         user.name = name
@@ -57,6 +58,8 @@ def update_profile(
         user.age = age
     if weight is not None:
         user.weight = weight
+    if profile_update_notifications is not None:
+        user.profile_update_notifications = profile_update_notifications
     session.commit()
     session.refresh(user)
     return user

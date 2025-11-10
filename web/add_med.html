@@ -1,251 +1,767 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChronicaCare · Добавить препарат</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LunaraPulse • WebApp</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <style>
         :root {
             --bg: #0f172a;
-            --card: rgba(16, 24, 40, 0.85);
-            --card-border: rgba(255, 255, 255, 0.08);
-            --text: #e2e8f0;
+            --card: rgba(15, 22, 42, 0.95);
             --muted: #94a3b8;
+            --text: #e2e8f0;
             --accent: #5de1ff;
             --accent-2: #3b82f6;
-            --input-bg: rgba(255, 255, 255, 0.05);
-            --input-border: rgba(148, 163, 184, 0.3);
+            --input-bg: rgba(148, 163, 184, 0.1);
+            --border: rgba(148, 163, 184, 0.3);
             color-scheme: dark;
         }
 
         * { box-sizing: border-box; }
-
         body {
             margin: 0;
             min-height: 100vh;
-            background: linear-gradient(145deg, #0f1624, #111827 40%, #090f1d);
             font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: radial-gradient(circle at 20% 20%, rgba(93,225,255,0.25), transparent 55%), #040712;
             color: var(--text);
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
         }
 
         .app {
-            width: 100%;
-            max-width: 420px;
-            padding: 24px 20px 32px;
+            max-width: 460px;
+            margin: 0 auto;
+            padding: 32px 20px 48px;
         }
 
         .hero {
-            border-radius: 24px;
             padding: 20px;
-            margin-bottom: 18px;
-            background: radial-gradient(circle at 20% -20%, rgba(93,225,255,0.5), transparent 45%) rgba(24, 34, 56, 0.95);
-            border: 1px solid var(--card-border);
-            box-shadow: 0 20px 45px rgba(9, 12, 22, 0.6);
+            border-radius: 22px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
         }
 
-        .hero h1 { margin: 0; font-size: 22px; font-weight: 600; }
-        .hero p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+        h1 {
+            margin: 0;
+            font-size: 22px;
+        }
 
-        .card {
+        .hero p {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tabs button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 14px;
+            border: 1px solid transparent;
+            background: rgba(255,255,255,0.05);
+            color: var(--text);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .tabs button.active {
+            background: linear-gradient(120deg, var(--accent), var(--accent-2));
+            color: #010b18;
+            border-color: transparent;
+        }
+
+        section {
+            display: none;
+        }
+
+        section.active {
+            display: block;
+        }
+
+        .card, .preview-card, .editor-card, .stats-card, .profile-card {
             background: var(--card);
             border-radius: 20px;
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--border);
             padding: 20px;
-            backdrop-filter: blur(10px);
+            margin-bottom: 18px;
         }
 
-        .section-title {
-            text-transform: uppercase;
-            letter-spacing: 0.18em;
-            font-size: 12px;
-            color: var(--muted);
-            margin-bottom: 6px;
-            font-weight: 600;
+        .preview-card {
+            background: rgba(15, 23, 42, 0.75);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            margin: 8px 0 16px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar input {
+            flex: 1 1 200px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--input-bg);
+            color: var(--text);
         }
 
         label {
-            display: block;
             font-size: 13px;
             font-weight: 500;
             margin-bottom: 6px;
-            color: var(--text);
+            display: block;
         }
 
-        input, select, textarea {
+        input, textarea, select {
             width: 100%;
-            color: var(--text);
-            font-size: 15px;
             padding: 12px 14px;
             border-radius: 14px;
-            border: 1px solid var(--input-border);
+            border: 1px solid var(--border);
             background: var(--input-bg);
+            color: var(--text);
+            font-size: 15px;
             outline: none;
-            transition: border 0.2s, background 0.2s;
+            transition: border 0.2s;
         }
 
-        input:focus, select:focus, textarea:focus {
+        input:focus, textarea:focus, select:focus {
             border-color: var(--accent);
-            background: rgba(93, 225, 255, 0.08);
         }
 
-        select option {
-            background: #0f172a;
-            color: #f8fafc;
+        textarea {
+            min-height: 90px;
+            resize: vertical;
         }
 
-        textarea { min-height: 90px; resize: vertical; }
+        .row {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
 
-        .row { display: flex; gap: 14px; flex-wrap: wrap; }
-        .field { flex: 1 1 160px; }
+        .field {
+            flex: 1 1 160px;
+        }
 
         .helper {
             font-size: 12px;
             color: var(--muted);
-            margin: 6px 0 16px;
+            margin: -4px 0 10px;
             line-height: 1.4;
         }
+        .notify-toggle {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin: 12px 0 4px;
+        }
+        .notify-toggle input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-top: 4px;
+        }
+        .notify-toggle span {
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+        .notify-toggle small {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
 
-        button {
+        .stock-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .stock-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .editor-item {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(148,163,184,0.2);
+        }
+
+        .editor-item:last-child {
+            border-bottom: none;
+        }
+
+        .editor-title {
+            flex: 1 1 200px;
+            font-weight: 600;
+        }
+
+        .editor-meta {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .editor-item button {
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text);
+            padding: 9px 14px;
+            cursor: pointer;
+        }
+
+        .editor-item button.primary {
+            background: var(--accent);
+            color: #010b18;
+            border: none;
+        }
+
+        button.primary-action {
             width: 100%;
-            padding: 16px;
+            margin-top: 10px;
+            padding: 15px;
             border: none;
             border-radius: 16px;
-            margin-top: 6px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-2));
-            color: #021222;
+            background: linear-gradient(120deg, var(--accent), var(--accent-2));
+            color: #010b18;
             font-size: 16px;
             font-weight: 600;
-            letter-spacing: 0.04em;
             cursor: pointer;
-            box-shadow: 0 12px 30px rgba(48, 201, 255, 0.35);
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
 
-        button:active {
-            transform: translateY(1px);
-            box-shadow: 0 6px 15px rgba(48, 201, 255, 0.25);
+        button.ghost-button {
+            padding: 15px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text);
+            font-weight: 600;
+            cursor: pointer;
         }
 
-        @media (max-width: 420px) {
-            .card { padding: 18px; }
-            .app { padding: 20px 14px 26px; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+
+        .stat-box {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 14px;
+        }
+
+        .stat-box h4 {
+            margin: 0 0 4px;
+            font-size: 13px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .stat-box p {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100%);
+            background: rgba(15, 23, 42, 0.95);
+            color: var(--text);
+            padding: 12px 18px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease;
+            z-index: 10;
+        }
+
+        .toast.visible {
+            transform: translateX(-50%) translateY(0);
         }
     </style>
 </head>
 <body>
     <div class="app">
         <div class="hero">
-            <h1>Добавить препарат</h1>
-            <p>Заполни форму — и ChronicaCare начнёт учитывать дозировки, остатки и напоминания.</p>
+            <h1>LunaraPulse</h1>
+            <p>Мини-кабинет: редактируй карточки, следи за статистикой и обновляй профиль прямо из WebApp.</p>
         </div>
 
-        <form class="card" id="med-form">
-            <div class="section-title">Основное</div>
-            <label for="name">Название</label>
-            <input type="text" id="name" placeholder="Например, Витамин D3" required>
+        <div class="tabs">
+            <button class="active" data-tab="cards">Карточки</button>
+            <button data-tab="stats">Статистика</button>
+            <button data-tab="profile">Профиль</button>
+        </div>
 
-            <div class="row">
-                <div class="field">
-                    <label for="dosage">Дозировка</label>
-                    <input type="text" id="dosage" placeholder="500 мг" required>
+        <section id="tab-cards" class="active">
+            <div class="preview-card">
+                <div class="toolbar">
+                    <input type="text" id="search-input" placeholder="Поиск по названию" />
                 </div>
-                <div class="field">
-                    <label for="form">Форма</label>
-                    <input type="text" id="form" placeholder="таблетки, капли..." required>
-                </div>
+                <ul class="stock-list" id="stock-items">
+                    <li><span>Нет данных</span><span>—</span></li>
+                </ul>
             </div>
 
-            <label for="category">Категория</label>
-            <select id="category" required>
-                <option value="Витамины">Витамины</option>
-                <option value="Рецептурное">Рецептурное</option>
-                <option value="Антибиотики">Антибиотики</option>
-                <option value="БАД">БАД</option>
-                <option value="Другое">Другое</option>
-            </select>
-            <p class="helper">Категория помогает подобрать стиль подсказок и учёта запасов.</p>
-
-            <div class="section-title">Дозы</div>
-            <div class="row">
-                <div class="field">
-                    <label for="dose_units">Единица дозы</label>
-                    <input type="text" id="dose_units" placeholder="табл., мл, капсула" required>
-                </div>
-                <div class="field">
-                    <label for="dose_size">Сколько за приём</label>
-                    <input type="number" id="dose_size" step="0.5" value="1" min="0.5">
-                </div>
+            <div class="editor-card" id="stock-editor" style="display:none;">
+                <p class="helper">Нажми «Редактировать», чтобы загрузить карточку в форму. Архивация доступна отдельно.</p>
+                <div id="editor-items"></div>
             </div>
 
-            <div class="row">
-                <div class="field">
-                    <label for="pack_total">Всего в упаковке</label>
-                    <input type="number" id="pack_total" min="0" placeholder="30">
+            <form class="card" id="med-form">
+                <div class="section-title">Основное</div>
+                <label for="name">Название</label>
+                <input type="text" id="name" placeholder="Например, Магний В6" required />
+
+                <div class="row">
+                    <div class="field">
+                        <label for="dosage">Дозировка</label>
+                        <input type="text" id="dosage" placeholder="500 мг" />
+                    </div>
+                    <div class="field">
+                        <label for="form">Форма</label>
+                        <input type="text" id="form" placeholder="таблетки, капсулы..." />
+                    </div>
                 </div>
-                <div class="field">
-                    <label for="stock_remaining">Сколько осталось</label>
-                    <input type="number" id="stock_remaining" min="0" placeholder="30">
+
+                <label for="category">Категория</label>
+                <input type="text" id="category" placeholder="сон, иммунитет..." />
+
+                <div class="section-title">Приём</div>
+                <div class="row">
+                    <div class="field">
+                        <label for="dose_units">Единицы</label>
+                        <input type="text" id="dose_units" value="табл." />
+                    </div>
+                    <div class="field">
+                        <label for="dose_size">Сколько за приём</label>
+                        <input type="number" id="dose_size" step="0.5" value="1" min="0.5" />
+                    </div>
                 </div>
+
+                <div class="row">
+                    <div class="field">
+                        <label for="pack_total">Всего в упаковке</label>
+                        <input type="number" id="pack_total" min="0" placeholder="30" />
+                    </div>
+                    <div class="field">
+                        <label for="stock_remaining">Осталось сейчас</label>
+                        <input type="number" id="stock_remaining" min="0" placeholder="30" />
+                    </div>
+                </div>
+                <p class="helper">Если «Осталось» пустое, система возьмёт число из «В упаковке».</p>
+
+                <div class="section-title">Заметки</div>
+                <label for="notes">Комментарий</label>
+                <textarea id="notes" placeholder="Например, после еды"></textarea>
+
+                <label for="photo_file_id">Фото (file_id)</label>
+                <input type="text" id="photo_file_id" placeholder="Например, AgACAgIAAxk..." />
+                <p class="helper">Чтобы получить `file_id`, отправь фото упаковки в чат с ботом — он ответит кодом.</p>
+
+                <div id="archive-field" style="display:none; margin-top: 8px;">
+                    <label style="display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="archived" />
+                        <span>Переместить в архив</span>
+                    </label>
+                </div>
+
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button type="submit" id="submit-btn" class="primary-action">Сохранить</button>
+                    <button type="button" id="cancel-edit" class="ghost-button" style="display:none;">Отмена</button>
+                </div>
+            </form>
+        </section>
+
+        <section id="tab-stats">
+            <div class="stats-card">
+                <h3>Сводка за 30 дней</h3>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <h4>Дисциплина</h4>
+                        <p id="stat-adherence">—</p>
+                    </div>
+                    <div class="stat-box">
+                        <h4>Принято</h4>
+                        <p id="stat-taken">—</p>
+                    </div>
+                    <div class="stat-box">
+                        <h4>Пропущено</h4>
+                        <p id="stat-missed">—</p>
+                    </div>
+                </div>
+                <div class="helper">Ниже — лекарства с лучшей дисциплиной.</div>
+                <ul class="stock-list" id="stat-per-med"></ul>
             </div>
+        </section>
 
-            <div class="section-title">Дополнительно</div>
-            <label for="notes">Комментарий</label>
-            <textarea id="notes" placeholder="Особые инструкции, код цвета и т.д."></textarea>
+        <section id="tab-profile">
+            <div class="profile-card">
+                <h3>Профиль</h3>
+                <form id="profile-form">
+                    <label>Имя</label>
+                    <input type="text" id="profile-name" />
 
-            <label for="photo_file_id">ID фото (опционально)</label>
-            <input type="text" id="photo_file_id" placeholder="Можно вставить file_id из ответа бота">
-            <p class="helper">Отправь фото упаковки в чат с ботом — он вернёт `file_id`. Скопируй его и вставь сюда.</p>
+                    <label>Цель</label>
+                    <input type="text" id="profile-goal" placeholder="Например, 30 дней без пропусков" />
 
-            <button type="submit">Сохранить препарат</button>
-        </form>
+                    <label>Часовой пояс</label>
+                    <input type="text" id="profile-timezone" placeholder="Europe/Moscow" />
+
+                    <label>Стиль общения</label>
+                    <select id="profile-personality">
+                        <option value="focus_dark">Фокус (тёмный)</option>
+                        <option value="happy_bot">Весёлый робот</option>
+                    </select>
+                    <div class="notify-toggle">
+                        <input type="checkbox" id="profile-notify" />
+                        <span>
+                            Напоминать в Telegram
+                            <small>Если отключить, бот не будет присылать сообщение после сохранения профиля.</small>
+                        </span>
+                    </div>
+
+                    <button type="submit" class="primary-action" id="profile-save">Сохранить профиль</button>
+                </form>
+            </div>
+        </section>
     </div>
+
+    <div class="toast" id="toast"></div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.ready();
 
-        const themeMap = {
-            bg_color: '--bg',
-            secondary_bg_color: '--card',
-            text_color: '--text',
-            hint_color: '--muted',
-            button_color: '--accent-2',
-            button_text_color: '--accent'
+        const initData = tg.initData || "";
+        let userId = tg.initDataUnsafe?.user?.id || null;
+
+        const API = {
+            profile: "/api/profile",
+            stats: "/api/stats/summary",
+            meds: "/api/medications",
         };
 
-        if (tg.themeParams) {
-            Object.entries(themeMap).forEach(([tgKey, cssVar]) => {
-                const value = tg.themeParams[tgKey];
-                if (value) {
-                    document.documentElement.style.setProperty(cssVar, value);
-                }
+        const tabs = document.querySelectorAll(".tabs button");
+        const sections = {
+            cards: document.getElementById("tab-cards"),
+            stats: document.getElementById("tab-stats"),
+            profile: document.getElementById("tab-profile"),
+        };
+
+        const stockList = document.getElementById("stock-items");
+        const editorCard = document.getElementById("stock-editor");
+        const editorItems = document.getElementById("editor-items");
+        const searchInput = document.getElementById("search-input");
+        const archiveField = document.getElementById("archive-field");
+        const toastEl = document.getElementById("toast");
+        const profileForm = document.getElementById("profile-form");
+        const profileNotify = document.getElementById("profile-notify");
+
+        let editingId = null;
+        let filterTerm = "";
+        const state = {
+            meds: [],
+            summary: null,
+            profile: null,
+        };
+
+        function showToast(msg) {
+            toastEl.textContent = msg;
+            toastEl.classList.add("visible");
+            setTimeout(() => toastEl.classList.remove("visible"), 2000);
+        }
+
+        function setActiveTab(tabKey) {
+            tabs.forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === tabKey));
+            Object.entries(sections).forEach(([key, section]) => {
+                section.classList.toggle("active", key === tabKey);
+            });
+            if (tabKey === "stats" && !state.summary) {
+                loadStats();
+            }
+            if (tabKey === "profile" && !state.profile) {
+                loadProfile();
+            }
+        }
+
+        tabs.forEach((btn) => {
+            btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
+        });
+
+        function parseNumber(value) {
+            const sanitized = (value || "").replace(",", ".");
+            const num = parseFloat(sanitized);
+            return Number.isFinite(num) ? num : 0;
+        }
+
+        function collectFormValues() {
+            return {
+                name: document.getElementById("name").value.trim(),
+                dosage: document.getElementById("dosage").value.trim(),
+                form: document.getElementById("form").value.trim(),
+                category: document.getElementById("category").value.trim(),
+                dose_units: document.getElementById("dose_units").value.trim(),
+                dose_size: parseNumber(document.getElementById("dose_size").value),
+                pack_total: parseNumber(document.getElementById("pack_total").value),
+                stock_remaining: parseNumber(document.getElementById("stock_remaining").value),
+                notes: document.getElementById("notes").value.trim(),
+                photo_file_id: document.getElementById("photo_file_id").value.trim(),
+                archived: document.getElementById("archived").checked,
+            };
+        }
+
+        function populateForm(item) {
+            document.getElementById("name").value = item.name || "";
+            document.getElementById("dosage").value = item.dosage || "";
+            document.getElementById("form").value = item.form || "";
+            document.getElementById("category").value = item.category || "";
+            document.getElementById("dose_units").value = item.dose_units || "";
+            document.getElementById("dose_size").value = item.dose_size ?? 1;
+            document.getElementById("pack_total").value = item.pack_total ?? 0;
+            document.getElementById("stock_remaining").value = item.stock ?? item.stock_remaining ?? 0;
+            document.getElementById("notes").value = item.notes || "";
+            document.getElementById("photo_file_id").value = item.photo_file_id || "";
+            document.getElementById("archived").checked = Boolean(item.archived);
+           .archiveField.style.display = "block";
+            editingId = item.id;
+            document.getElementById("submit-btn").textContent = "Обновить";
+            document.getElementById("cancel-edit").style.display = "inline-block";
+        }
+
+        function resetForm() {
+            const form = document.getElementById("med-form");
+            form.reset();
+            document.getElementById("dose_size").value = "1";
+            document.getElementById("dose_units").value = "табл.";
+            document.getElementById("archived").checked = false;
+            archiveField.style.display = "none";
+            editingId = null;
+            document.getElementById("submit-btn").textContent = "Сохранить";
+            document.getElementById("cancel-edit").style.display = "none";
+        }
+
+        document.getElementById("cancel-edit").addEventListener("click", resetForm);
+
+        async function apiGet(url) {
+            const response = await fetch(`${url}?init_data=${encodeURIComponent(initData)}`);
+            if (!response.ok) throw new Error("failed");
+            return response.json();
+        }
+
+        async function apiPut(url, body) {
+            const response = await fetch(url, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ init_data: initData, ...body }),
+            });
+            if (!response.ok) throw new Error("failed");
+            return response.json();
+        }
+
+        function filteredMeds() {
+            if (!filterTerm) return state.meds;
+            const needle = filterTerm.toLowerCase();
+            return state.meds.filter((item) => (item.name || "").toLowerCase().includes(needle));
+        }
+
+        function renderPreview() {
+            const items = filteredMeds();
+            if (!items.length) {
+                stockList.innerHTML = "<li><span>Список пуст</span><span>0</span></li>";
+                return;
+            }
+            stockList.innerHTML = items
+                .map(
+                    (item) =>
+                        `<li><span>${item.name}${item.archived ? " (архив)" : ""}</span><span>${
+                            item.stock ?? item.stock_remaining ?? 0
+                        }</span></li>`
+                )
+                .join("");
+        }
+
+        function renderEditor() {
+            const items = filteredMeds();
+            if (!items.length || !initData) {
+                editorCard.style.display = "none";
+                return;
+            }
+            editorCard.style.display = "block";
+            editorItems.innerHTML = "";
+            items.forEach((item) => {
+                const row = document.createElement("div");
+                row.className = "editor-item";
+
+                const label = document.createElement("div");
+                label.className = "editor-title";
+                label.innerHTML = `${item.name} <span class="editor-meta">${
+                    item.stock ?? item.stock_remaining ?? 0
+                } ${item.archived ? "• архив" : ""}</span>`;
+
+                const editBtn = document.createElement("button");
+                editBtn.type = "button";
+                editBtn.classList.add("primary");
+                editBtn.textContent = "Редактировать";
+                editBtn.addEventListener("click", () => populateForm(item));
+
+                const archiveBtn = document.createElement("button");
+                archiveBtn.type = "button";
+                archiveBtn.textContent = item.archived ? "Вернуть" : "Архивировать";
+                archiveBtn.addEventListener("click", () => toggleArchive(item));
+
+                row.appendChild(label);
+                row.appendChild(editBtn);
+                row.appendChild(archiveBtn);
+                editorItems.appendChild(row);
             });
         }
 
-        document.getElementById("med-form").addEventListener("submit", function(event) {
+        async function toggleArchive(item) {
+            try {
+                const updated = await apiPut(`/api/medications/${item.id}`, { archived: !item.archived });
+                const index = state.meds.findIndex((entry) => entry.id === updated.id);
+                if (index !== -1) {
+                    state.meds[index] = updated;
+                }
+                renderPreview();
+                renderEditor();
+                showToast(updated.archived ? "Перенесено в архив" : "Вернул в активные");
+            } catch (err) {
+                showToast("Ошибка архивации");
+            }
+        }
+
+        document.getElementById("med-form").addEventListener("submit", async (event) => {
             event.preventDefault();
-            const med_data = {
-                name: document.getElementById("name").value,
-                dosage: document.getElementById("dosage").value,
-                form: document.getElementById("form").value,
-                category: document.getElementById("category").value,
-                dose_units: document.getElementById("dose_units").value,
-                dose_size: document.getElementById("dose_size").value,
-                pack_total: document.getElementById("pack_total").value,
-                stock_remaining: document.getElementById("stock_remaining").value,
-                notes: document.getElementById("notes").value,
-                photo_file_id: document.getElementById("photo_file_id").value,
-            };
-            tg.sendData(JSON.stringify(med_data));
+            const values = collectFormValues();
+            if (editingId) {
+                try {
+                    const updated = await apiPut(`/api/medications/${editingId}`, values);
+                    const index = state.meds.findIndex((item) => item.id === updated.id);
+                    if (index !== -1) state.meds[index] = updated;
+                    renderPreview();
+                    renderEditor();
+                    resetForm();
+                    showToast("Карточка обновлена");
+                } catch (err) {
+                    showToast("Ошибка обновления");
+                }
+                return;
+            }
+            const payload = { ...values };
+            payload.dose_size = payload.dose_size ? String(payload.dose_size) : "";
+            payload.pack_total = payload.pack_total ? String(payload.pack_total) : "";
+            payload.stock_remaining = payload.stock_remaining ? String(payload.stock_remaining) : "";
+            delete payload.archived;
+            tg.sendData(JSON.stringify(payload));
             tg.close();
         });
+
+        searchInput.addEventListener("input", (event) => {
+            filterTerm = event.target.value.trim();
+            renderPreview();
+            renderEditor();
+        });
+
+        async function loadMeds() {
+            try {
+                const data = await apiGet(API.meds);
+                if (data.user?.id) userId = data.user.id;
+                state.meds = data.items || [];
+                renderPreview();
+                renderEditor();
+            } catch (err) {
+                stockList.innerHTML = "<li><span>Не удалось загрузить</span><span>—</span></li>";
+                editorCard.style.display = "none";
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const data = await apiGet(API.stats);
+                state.summary = data.summary;
+                document.getElementById("stat-adherence").textContent = `${state.summary.adherence}%`;
+                document.getElementById("stat-taken").textContent = state.summary.taken;
+                document.getElementById("stat-missed").textContent = state.summary.missed;
+                const perMed = state.summary.per_med || {};
+                const list = Object.entries(perMed)
+                    .map(([name, info]) => {
+                        const total = info.total || 1;
+                        const percent = total ? Math.round((info.taken / total) * 100) : 0;
+                        return `<li><span>${name}</span><span>${percent}%</span></li>`;
+                    })
+                    .join("") || "<li><span>Нет данных</span><span>—</span></li>";
+                document.getElementById("stat-per-med").innerHTML = list;
+            } catch (err) {
+                document.getElementById("stat-per-med").innerHTML = "<li><span>Не удалось загрузить</span><span>—</span></li>";
+            }
+        }
+
+        async function loadProfile() {
+            try {
+                const data = await apiGet(API.profile);
+                state.profile = data.profile;
+                document.getElementById("profile-name").value = state.profile.name || "";
+                document.getElementById("profile-goal").value = state.profile.goal || "";
+                document.getElementById("profile-timezone").value = state.profile.timezone || "Europe/Moscow";
+                document.getElementById("profile-personality").value = state.profile.personality || "focus_dark";
+                profileNotify.checked = state.profile.notify_profile_updates !== false;
+                if (data.medications) {
+                    state.meds = data.medications;
+                    renderPreview();
+                    renderEditor();
+                }
+            } catch (err) {
+                showToast("Не удалось загрузить профиль");
+            }
+        }
+
+        profileForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const body = {
+                name: document.getElementById("profile-name").value.trim(),
+                goal: document.getElementById("profile-goal").value.trim(),
+                timezone: document.getElementById("profile-timezone").value.trim(),
+                personality: document.getElementById("profile-personality").value,
+                notify_profile_updates: profileNotify.checked,
+            };
+            try {
+                const result = await apiPut(API.profile, body);
+                state.profile = result.profile;
+                profileNotify.checked = state.profile.notify_profile_updates !== false;
+                showToast("Профиль обновлен");
+            } catch (err) {
+                showToast("Ошибка обновления профиля");
+            }
+        });
+
+        loadMeds();
     </script>
+
+    <div class="toast" id="toast"></div>
 </body>
 </html>
